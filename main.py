@@ -41,10 +41,7 @@ def reply(update: Update, context: CallbackContext) -> None:
         generate_token()
 
     answer = chat.ask(update.message.text)
-    try:
-        update.message.reply_text(answer)
-    except:
-        update.message.reply_text("API not responding")
+    update.message.reply_text(answer)
 
 def generate_token():
     now = datetime.now().strftime("%H:%M:%S")
