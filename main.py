@@ -2,8 +2,9 @@
 
 import logging
 import os
+from datetime import datetime
 
-from pychatgpt import Chat
+from pychatgpt import Chat, OpenAI
 from telegram import ChatAction, ForceReply, Update
 from telegram.ext import (CallbackContext, CommandHandler, Filters,
                           MessageHandler, Updater)
@@ -34,18 +35,28 @@ def help_command(update: Update, context: CallbackContext) -> None:
 
 def reply(update: Update, context: CallbackContext) -> None:
     context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
+
+    is_expired = OpenAI.token_expired()
+    if is_expired:
+        generate_token()
+
     answer = chat.ask(update.message.text)
     try:
         update.message.reply_text(answer)
     except:
         update.message.reply_text("API not responding")
 
+def generate_token():
+    now = datetime.now().strftime("%H:%M:%S")
+    print("${now}: Generating new access token")
 
-def main() -> None:
     email = os.environ.get("OPENAI_EMAIL")
     password = os.environ.get("OPENAI_PASSWORD")
     global chat
     chat = Chat(email=email, password=password)
+
+def main() -> None:
+    generate_token()
 
     """Start the bot."""
     # Create the Updater and pass it your bot's token.
