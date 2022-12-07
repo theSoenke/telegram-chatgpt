@@ -34,6 +34,7 @@ def help_command(update: Update, context: CallbackContext) -> None:
 
 
 def reply(update: Update, context: CallbackContext) -> None:
+    logging.info('Replying')
     context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
 
     is_expired = OpenAI.token_expired()
@@ -44,8 +45,7 @@ def reply(update: Update, context: CallbackContext) -> None:
     update.message.reply_text(answer)
 
 def generate_token():
-    now = datetime.now().strftime("%H:%M:%S")
-    print("${now}: Generating new access token")
+    logging.info('Generating new access token')
 
     email = os.environ.get("OPENAI_EMAIL")
     password = os.environ.get("OPENAI_PASSWORD")
