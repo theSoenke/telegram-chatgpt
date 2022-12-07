@@ -3,7 +3,8 @@
 import logging
 import os
 
-from telegram import ForceReply, Update
+from pychatgpt import Chat
+from telegram import ChatAction, ForceReply, Update
 from telegram.ext import (CallbackContext, CommandHandler, Filters,
                           MessageHandler, Updater)
 
@@ -31,12 +32,21 @@ def help_command(update: Update, context: CallbackContext) -> None:
     update.message.reply_text('Help!')
 
 
-def echo(update: Update, context: CallbackContext) -> None:
-    """Echo the user message."""
-    update.message.reply_text(update.message.text)
+def reply(update: Update, context: CallbackContext) -> None:
+    context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
+    answer = chat.ask(update.message.text)
+    try:
+        update.message.reply_text(answer)
+    except:
+        update.message.reply_text("API not responding")
 
 
 def main() -> None:
+    email = os.environ.get("OPENAI_EMAIL")
+    password = os.environ.get("OPENAI_PASSWORD")
+    global chat
+    chat = Chat(email=email, password=password)
+
     """Start the bot."""
     # Create the Updater and pass it your bot's token.
     token = os.environ.get("TOKEN")
@@ -50,7 +60,7 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler("help", help_command))
 
     # on non command i.e message - echo the message on Telegram
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, reply))
 
     # Start the Bot
     updater.start_polling()
