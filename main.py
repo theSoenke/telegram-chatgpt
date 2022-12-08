@@ -12,9 +12,7 @@ from telegram.ext import (CallbackContext, CommandHandler, Filters,
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-email = os.environ.get("OPENAI_EMAIL")
-password = os.environ.get("OPENAI_PASSWORD")
-chat = Chat(email=email, password=password)
+chats = {}
 
 """Send a message when the command /start is issued."""
 def start(update: Update, context: CallbackContext) -> None:
@@ -26,9 +24,19 @@ def start(update: Update, context: CallbackContext) -> None:
 
 def reply(update: Update, context: CallbackContext) -> None:
     logging.info('Replying')
-    context.bot.send_chat_action(chat_id=update.effective_message.chat_id, action=ChatAction.TYPING)
+    chat_id = update.effective_message.chat_id
+    context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
-    answer = chat.ask(update.message.text)
+    if chat_id not in chats:
+        if len(chats) >= 10:
+            update.message.reply_text("Reached maximum number of chats")
+            return
+        else:
+            email = os.environ.get("OPENAI_EMAIL")
+            password = os.environ.get("OPENAI_PASSWORD")
+            chats[chat_id] = Chat(email=email, password=password)
+
+    answer = chats[chat_id].ask(update.message.text)
     update.message.reply_text(answer)
 
 def main() -> None:
