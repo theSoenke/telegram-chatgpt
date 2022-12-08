@@ -16,13 +16,12 @@ logger = logging.getLogger(__name__)
 
 chats = {}
 
-"""Send a message when the command /start is issued."""
 def start(update: Update, context: CallbackContext) -> None:
-    user = update.effective_user
-    update.message.reply_markdown_v2(
-        fr'Hi {user.mention_markdown_v2()}\!',
-        reply_markup=ForceReply(selective=True),
-    )
+    update.message.reply_text("Hello! Write me a message to chat\n\nYou can use these additional commands:\n/draw <prompt> - generate image\n/help - show help message")
+
+def help(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text("Hello! Write me a message to chat\n\nYou can use these additional commands:\n/draw <prompt> - generate image\n/help - show help message")
+
 
 def reply(update: Update, context: CallbackContext) -> None:
     logging.info('Replying')
@@ -58,6 +57,7 @@ def main() -> None:
     updater = Updater(token)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CommandHandler("help", help))
     dispatcher.add_handler(CommandHandler("draw", draw))
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, reply))
     updater.start_polling()
