@@ -11,20 +11,36 @@ from telegram.ext import (CallbackContext, CommandHandler, Filters,
 
 from image_gen import text2image
 
+MAX_MESSAGE_LENGTH = 4096
+HELP_MESSAGE = """
+Hello! Write me a message to get an answer to anything
+
+You can use these additional commands:
+/draw <prompt> - generate image
+/reset - reset chat memory
+/help - show help message
+"""
+
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 email = os.environ.get("OPENAI_EMAIL")
 password = os.environ.get("OPENAI_PASSWORD")
 chat = Chat(email=email, password=password)
-
 chat_map = {}
 
+
 def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text("Hello! Write me a message to chat\n\nYou can use these additional commands:\n/draw <prompt> - generate image\n/help - show help message")
+    update.message.reply_text(HELP_MESSAGE)
 
 def help(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text("Hello! Write me a message to chat\n\nYou can use these additional commands:\n/draw <prompt> - generate image\n/help - show help message")
+    update.message.reply_text(HELP_MESSAGE)
+
+def reset(update: Update, context: CallbackContext) -> None:
+    logging.info('Resetting')
+    chat_id = update.effective_message.chat_id
+    chat_map[chat_id] = None
+    update.message.reply_text("Chat memory has been reset")
 
 
 def reply(update: Update, context: CallbackContext) -> None:
@@ -46,14 +62,17 @@ def reply(update: Update, context: CallbackContext) -> None:
         conversation_id=conversation_id
     )
     chat_map[chat_id] = [previous_message_id, conversation_id]
-    update.message.reply_text(answer)
+
+    parts = [answer[i:i+MAX_MESSAGE_LENGTH] for i in range(0, len(answer), MAX_MESSAGE_LENGTH)]
+    for part in parts:
+        update.message.reply_text(part)
 
 def draw(update: Update, context: CallbackContext) -> None:
     logging.info('Drawing')
     chat_id = update.effective_message.chat_id
     context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
-    prompt = update.message.text.removeprefix("/draw")
+    prompt = update.message.text.removeprefix("/draw").strip()
     photo = text2image(prompt)
     if photo != None:
         context.bot.send_photo(chat_id, photo=photo)
@@ -67,6 +86,7 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("help", help))
     dispatcher.add_handler(CommandHandler("draw", draw))
+    dispatcher.add_handler(CommandHandler("reset", reset))
     dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, reply))
     updater.start_polling()
     updater.idle()
