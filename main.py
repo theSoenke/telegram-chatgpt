@@ -39,7 +39,9 @@ def help(update: Update, context: CallbackContext) -> None:
 def reset(update: Update, context: CallbackContext) -> None:
     logging.info('Resetting')
     chat_id = update.effective_message.chat_id
-    chat_map[chat_id] = None
+    if chat_id in chat_map[chat_id]:
+        del chat_map[chat_id]
+
     update.message.reply_text("Chat memory has been reset")
 
 
