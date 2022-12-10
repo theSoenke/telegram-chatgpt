@@ -14,7 +14,11 @@ from image_gen import text2image
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-chats = {}
+email = os.environ.get("OPENAI_EMAIL")
+password = os.environ.get("OPENAI_PASSWORD")
+chat = Chat(email=email, password=password)
+
+chat_map = {}
 
 def start(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("Hello! Write me a message to chat\n\nYou can use these additional commands:\n/draw <prompt> - generate image\n/help - show help message")
@@ -28,16 +32,20 @@ def reply(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_message.chat_id
     context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
-    if chat_id not in chats:
-        if len(chats) >= 10:
-            update.message.reply_text("Reached maximum number of chats")
-            return
-        else:
-            email = os.environ.get("OPENAI_EMAIL")
-            password = os.environ.get("OPENAI_PASSWORD")
-            chats[chat_id] = Chat(email=email, password=password)
+    if len(chat_map) >= 100:
+        update.message.reply_text("Reached maximum number of chats")
+        return
 
-    answer = chats[chat_id].ask(update.message.text)
+    previous_message_id, conversation_id = None, None
+    if chat_id in chat_map:
+        previous_message_id, conversation_id = chat_map[chat_id]
+
+    answer, previous_message_id, conversation_id = chat.ask(
+        update.message.text,
+        previous_convo_id=previous_message_id,
+        conversation_id=conversation_id
+    )
+    chat_map[chat_id] = [previous_message_id, conversation_id]
     update.message.reply_text(answer)
 
 def draw(update: Update, context: CallbackContext) -> None:
