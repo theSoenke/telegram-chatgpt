@@ -4,8 +4,8 @@ import logging
 import os
 from datetime import datetime
 
-from pychatgpt import Chat
-from telegram import ChatAction, ForceReply, Update
+import openai
+from telegram import ChatAction, Update
 from telegram.ext import (CallbackContext, CommandHandler, Filters,
                           MessageHandler, Updater)
 
@@ -24,9 +24,6 @@ You can use these additional commands:
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-email = os.environ.get("OPENAI_EMAIL")
-password = os.environ.get("OPENAI_PASSWORD")
-chat = Chat(email=email, password=password)
 chat_map = {}
 
 
@@ -39,7 +36,7 @@ def help(update: Update, context: CallbackContext) -> None:
 def reset(update: Update, context: CallbackContext) -> None:
     logging.info('Resetting')
     chat_id = update.effective_message.chat_id
-    if chat_id in chat_map[chat_id]:
+    if chat_id in chat_map:
         del chat_map[chat_id]
 
     update.message.reply_text("Chat memory has been reset")
@@ -54,16 +51,22 @@ def reply(update: Update, context: CallbackContext) -> None:
         update.message.reply_text("Reached maximum number of chats")
         return
 
-    previous_message_id, conversation_id = None, None
+    user_message = {"role": "user", "content": update.message.text}
+    messages = [{"role": "system", "content": "You are a helpful assistant."}]
     if chat_id in chat_map:
-        previous_message_id, conversation_id = chat_map[chat_id]
+        messages = messages + chat_map[chat_id]
+    messages = messages + [user_message]
 
-    answer, previous_message_id, conversation_id = chat.ask(
-        update.message.text,
-        previous_convo_id=previous_message_id,
-        conversation_id=conversation_id
+    result = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=messages
     )
-    chat_map[chat_id] = [previous_message_id, conversation_id]
+    answer = result["choices"][0]["message"]["content"]
+    bot_message = {"role": "system", "content": answer}
+    if chat_id in chat_map:
+        chat_map[chat_id] = chat_map[chat_id] + [user_message, bot_message]
+    else:
+        chat_map[chat_id] = [user_message, bot_message]
 
     parts = [answer[i:i+MAX_MESSAGE_LENGTH] for i in range(0, len(answer), MAX_MESSAGE_LENGTH)]
     for part in parts:
