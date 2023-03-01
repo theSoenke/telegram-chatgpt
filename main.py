@@ -5,9 +5,10 @@ import os
 from datetime import datetime
 
 import openai
-from telegram import ChatAction, Update
+from telegram import ChatAction, ParseMode, Update
 from telegram.ext import (CallbackContext, CommandHandler, Filters,
                           MessageHandler, Updater)
+from telegram.utils.helpers import escape_markdown
 
 from image_gen import text2image
 
@@ -70,7 +71,7 @@ def reply(update: Update, context: CallbackContext) -> None:
 
     parts = [answer[i:i+MAX_MESSAGE_LENGTH] for i in range(0, len(answer), MAX_MESSAGE_LENGTH)]
     for part in parts:
-        update.message.reply_text(part)
+        update.message.reply_text(escape_markdown(part, version=2), parse_mode=ParseMode.MARKDOWN_V2)
 
 def draw(update: Update, context: CallbackContext) -> None:
     logging.info('Drawing')
