@@ -43,6 +43,18 @@ def reset(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("Chat memory has been reset")
 
 
+def add_message(chat_id, content, role):
+    if chat_id in chat_map:
+        messages = chat_map[chat_id]
+    else:
+        messages = [{"role": "system", "content": "You are a helpful assistant."}]
+
+    message = {"role": role, "content": content}
+    messages = messages + [message]
+
+    chat_map[chat_id] = messages
+    return messages
+
 def reply(update: Update, context: CallbackContext) -> None:
     logging.info('Replying')
     chat_id = update.effective_message.chat_id
@@ -52,22 +64,13 @@ def reply(update: Update, context: CallbackContext) -> None:
         update.message.reply_text("Reached maximum number of chats")
         return
 
-    user_message = {"role": "user", "content": update.message.text}
-    messages = [{"role": "system", "content": "You are a helpful assistant."}]
-    if chat_id in chat_map:
-        messages = messages + chat_map[chat_id]
-    messages = messages + [user_message]
-
+    messages = add_message(chat_id, update.message.text, "user")
     result = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=messages
     )
     answer = result["choices"][0]["message"]["content"]
-    bot_message = {"role": "system", "content": answer}
-    if chat_id in chat_map:
-        chat_map[chat_id] = chat_map[chat_id] + [user_message, bot_message]
-    else:
-        chat_map[chat_id] = [user_message, bot_message]
+    add_message(chat_id, answer, "system")
 
     parts = [answer[i:i+MAX_MESSAGE_LENGTH] for i in range(0, len(answer), MAX_MESSAGE_LENGTH)]
     for part in parts:
