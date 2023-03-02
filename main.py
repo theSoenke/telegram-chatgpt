@@ -12,6 +12,7 @@ from telegram.utils.helpers import escape_markdown
 
 from image_gen import text2image
 
+MAX_HISTORY=50
 MAX_MESSAGE_LENGTH = 4096
 HELP_MESSAGE = """
 Hello! Write me a message to get an answer to anything
@@ -42,19 +43,6 @@ def reset(update: Update, context: CallbackContext) -> None:
 
     update.message.reply_text("Chat memory has been reset")
 
-
-def add_message(chat_id, content, role):
-    if chat_id in chat_map:
-        messages = chat_map[chat_id]
-    else:
-        messages = [{"role": "system", "content": "You are a helpful assistant."}]
-
-    message = {"role": role, "content": content}
-    messages = messages + [message]
-
-    chat_map[chat_id] = messages
-    return messages
-
 def reply(update: Update, context: CallbackContext) -> None:
     logging.info('Replying')
     chat_id = update.effective_message.chat_id
@@ -75,6 +63,22 @@ def reply(update: Update, context: CallbackContext) -> None:
     parts = [answer[i:i+MAX_MESSAGE_LENGTH] for i in range(0, len(answer), MAX_MESSAGE_LENGTH)]
     for part in parts:
         update.message.reply_text(escape_markdown(part, version=2), parse_mode=ParseMode.MARKDOWN_V2)
+
+def add_message(chat_id, content, role):
+    default_prompt = {"role": "system", "content": "You are a helpful assistant."}
+    if chat_id in chat_map:
+        messages = chat_map[chat_id]
+    else:
+        messages = [default_prompt]
+
+    message = {"role": role, "content": content}
+    messages = messages + [message]
+
+    if len(messages) >= MAX_HISTORY:
+        messages.pop(len(message)-1)
+
+    chat_map[chat_id] = messages
+    return messages
 
 def draw(update: Update, context: CallbackContext) -> None:
     logging.info('Drawing')
