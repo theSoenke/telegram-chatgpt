@@ -1,5 +1,7 @@
 # telegram-chatgpt
 
-## Deploy
+Chat bot to talk with ChatGPT. The bot remembers up to 50 messages as context for ChatGPT.
 
-    ./deploy.sh
+## Run
+
+    OPENAI_API_KEY="" TELEGRAM_API_KEY="" python main.py

@@ -26,7 +26,7 @@ You can use these additional commands:
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-chat_map = {}
+chat_history = {}
 
 
 def start(update: Update, context: CallbackContext) -> None:
@@ -38,8 +38,8 @@ def help(update: Update, context: CallbackContext) -> None:
 def reset(update: Update, context: CallbackContext) -> None:
     logging.info('Resetting')
     chat_id = update.effective_message.chat_id
-    if chat_id in chat_map:
-        del chat_map[chat_id]
+    if chat_id in chat_history:
+        del chat_history[chat_id]
 
     update.message.reply_text("Chat memory has been reset")
 
@@ -48,7 +48,7 @@ def reply(update: Update, context: CallbackContext) -> None:
     chat_id = update.effective_message.chat_id
     context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
-    if len(chat_map) >= 100:
+    if len(chat_history) >= 100:
         update.message.reply_text("Reached maximum number of chats")
         return
 
@@ -66,8 +66,8 @@ def reply(update: Update, context: CallbackContext) -> None:
 
 def add_message(chat_id, content, role):
     default_prompt = {"role": "system", "content": "You are a helpful assistant."}
-    if chat_id in chat_map:
-        messages = chat_map[chat_id]
+    if chat_id in chat_history:
+        messages = chat_history[chat_id]
     else:
         messages = [default_prompt]
 
@@ -77,7 +77,7 @@ def add_message(chat_id, content, role):
     if len(messages) >= MAX_HISTORY:
         messages.pop(len(message)-1)
 
-    chat_map[chat_id] = messages
+    chat_history[chat_id] = messages
     return messages
 
 def draw(update: Update, context: CallbackContext) -> None:
@@ -93,8 +93,7 @@ def draw(update: Update, context: CallbackContext) -> None:
        update.message.reply_text("failed to generate image")
 
 def main() -> None:
-    token = os.environ.get("TOKEN")
-    updater = Updater(token)
+    updater = Updater(os.environ.get("TELEGRAM_API_KEY"))
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("help", help))
